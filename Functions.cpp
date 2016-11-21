@@ -18,3 +18,14 @@ fstream LoadFile() {
 	cout << "The file was successfully loaded." << endl;
 	return graphFile;
 }
+
+void PrintMatrix(int** matrix, int size) {
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			cout << matrix[i][j] << " ";
+			if (j == size - 1)
+				cout << endl;
+		}
+	}
+	cout << endl;
+}
