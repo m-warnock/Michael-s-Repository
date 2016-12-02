@@ -1,3 +1,9 @@
+// Michael Warnock ID: 16120478
+// CS 404 
+// Prof: Van De Leifvoort
+// Sneaky Path Project
+// Due 26 November 2016
+//********************************************************************************************************
 #include "definitions.h"
 
 extern int N;
@@ -12,7 +18,7 @@ fstream LoadFile() {
 
 	//Prompt for file and check validity
 	while (!goodFile) {
-		cout << "Please enter a properly formatted file you would like to load (default is 'Graph.txt'):" << endl;
+		cout << "Please enter a properly formatted file you would like to load:" << endl;
 		cin >> fileName;
 		graphFile.open(fileName);
 
@@ -21,39 +27,77 @@ fstream LoadFile() {
 		}
 		else goodFile = true;
 	}
-	cout << "The file was successfully loaded." << endl;
+	cout << "The file was successfully loaded." << endl << endl;
 	return graphFile;
 }
 
-
-void PrintMatrix(int** matrix, int size) {
-	cout << endl;
+//creates an int matrix
+int** CreateMatrix(int initialvalue, int size) {
+	int** Matrix = new int*[size];
 	for (int i = 0; i < size; i++) {
+		Matrix[i] = new int[size];
 		for (int j = 0; j < size; j++) {
-			cout << matrix[i][j] << " ";
-			if (j == size - 1)
-				cout << endl;
+			Matrix[i][j] = initialvalue;
 		}
 	}
+	return Matrix;
+}
+//print a 2D matrix to console
+void PrintMatrix(int** matrix, int size, string message) {
+	ofstream myfile;
+	myfile.open("SneakyPathOutput.txt", ofstream::app);
+	myfile << endl;
+	myfile << message << endl;
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			myfile << matrix[i][j] << "  ";
+			if (j == size - 1)
+				myfile << endl;
+		}
+	}
+	myfile.close();
 }
 
-void PrintMatrix(int*** matrix, int size) {
-	int k;
+
+//print float matrix
+void PrintMatrix(float** matrix, int size, string message) {
+	ofstream myfile;
+	myfile.open("SneakyPathOutput.txt", ofstream::app);
+	myfile << endl;
+	myfile << message << endl;
 	for (int i = 0; i < size; i++) {
-		cout << endl;
 		for (int j = 0; j < size; j++) {
-			k = 0;
-			cout << "(";
-			while (matrix[i][j][k] > 0) {
-				if (k != 0)
-					cout << " ";
-				cout << matrix[i][j][k];
-				k++;
-			}
-			cout << ")   ";
+			myfile << setprecision(2)<< fixed << matrix[i][j] << "  ";
+			if (j == size - 1)
+				myfile << endl;
 		}
 	}
-	cout << endl;
+	myfile.close();
+}
+
+
+//print a 3D matrix to console
+void PrintMatrix(int*** matrix, int size, string message) {
+	ofstream myfile;
+	myfile.open("SneakyPathOutput.txt", ofstream::app);
+	myfile << endl << message;
+	int k;
+	for (int i = 0; i < size; i++) {
+		myfile << endl;
+		for (int j = 0; j < size; j++) {
+			k = 0;
+			myfile << "(";
+			while (matrix[i][j][k] > 0) {
+				if (k != 0)
+					myfile << " ";
+				myfile << matrix[i][j][k];
+				k++;
+			}
+			myfile << ")   ";
+		}
+	}
+	myfile << endl;
+	myfile.close();
 }
 
 void FloydWarshall(int** &edgeMat, int** &pathMat) {
@@ -88,7 +132,7 @@ void DeriveShortestPaths(int** &pathMat, int*** &shortestPaths) {
 					if (pathMat[i][z] == i + 1) {
 						tmp.push_back(pathMat[i][z]);
 						break;
-					}
+					}//The path is placed on the vector in reverse order.
 					tmp.push_back(pathMat[i][z]);
 					z = pathMat[i][z]-1;
 					if(pathMat[i][z] == i + 1)
@@ -114,12 +158,14 @@ void DeriveShortestPaths(int** &pathMat, int*** &shortestPaths) {
 }
 
 
-void DeriveTotalFlow(int*** &shortestPaths, int** &initialFlow, int** &totalFlow){
+void DeriveTotalFlow(int*** &shortestPaths, int** &initialFlow, int** &totalFlow, int** initialPath){
 	//iterate through all of the flow routes one edge at a time to accumulate total flow.
+	//the initial path is used to determine where the NA's go on the totalFlow matrix and place infinity (216000) in that position
 	int from, to, k, singleEdgeFlow;
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < N; j++) {
 			k = 0;
+			//since the arrays vary in size, the k + 1th index (look ahead 1) must be checked to see if that position has been initialized as uninitialized data is large negative numbers
 			while (shortestPaths[i][j][k] && shortestPaths[i][j][k + 1] > 0) {
 				from = shortestPaths[i][j][k];
 				to = shortestPaths[i][j][k+1];
@@ -129,6 +175,39 @@ void DeriveTotalFlow(int*** &shortestPaths, int** &initialFlow, int** &totalFlow
 				totalFlow[from - 1][to - 1] += singleEdgeFlow; //account for off by 1 indexing
 				k++;
 			}
+			if (initialPath[i][j] == -1 && i != j) {
+				totalFlow[i][j] = 216000;
+			}
+		}
+	}
+}
+
+
+void MinMaxAvgSneakyPath(int*** allPaths, int** flowPerEdge, int** &minmat, int** &maxmat, float** &avgmat) {
+	int min, max, k;
+	float avg;
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < N; j++) {
+			k = 0;
+			min = flowPerEdge[i][j];
+			max = 0;
+			avg = 0.0;
+			while(allPaths[i][j][k+1] > 0) {
+
+				if (flowPerEdge[allPaths[i][j][k] - 1][allPaths[i][j][k+1] - 1] < min)
+					min = flowPerEdge[allPaths[i][j][k] - 1][allPaths[i][j][k + 1] -1];
+				if (flowPerEdge[allPaths[i][j][k] - 1][allPaths[i][j][k + 1] - 1] > max)
+					max = flowPerEdge[allPaths[i][j][k] - 1][allPaths[i][j][k + 1] - 1];
+				avg += flowPerEdge[allPaths[i][j][k] - 1][allPaths[i][j][k + 1] - 1];
+				k++;
+			}
+
+			minmat[i][j] = min;
+			maxmat[i][j] = max;
+			if (avg != 0)
+				avgmat[i][j] = avg / k;
+			else
+				avgmat[i][j] = 0;
 		}
 	}
 }
